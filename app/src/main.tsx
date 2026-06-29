@@ -3,6 +3,17 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import './theme.css'
 
+// Telegram Mini-App: if launched inside Telegram, go full-height and match the theme.
+const tg = (window as unknown as { Telegram?: { WebApp?: { ready(): void; expand(): void } } }).Telegram?.WebApp
+if (tg) {
+  try {
+    tg.ready()
+    tg.expand()
+  } catch {
+    /* not in Telegram */
+  }
+}
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
