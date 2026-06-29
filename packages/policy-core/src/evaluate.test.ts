@@ -54,4 +54,16 @@ describe('evaluate', () => {
   test('normalizeAddress trims and lowercases', () => {
     expect(normalizeAddress('  0xAbC ')).toBe('0xabc')
   })
+  test('rejects a single spend over the per-category stake cap (boundary: equal allowed)', () => {
+    const r = { ...rules, perCategoryStakeCaps: { tips: 2_000_000n } }
+    expect(evaluate(r, fresh, { amount: 2_000_000n, category: 'tips', to: ADDR, timestamp: 150 }).allowed).toBe(true)
+    expect(evaluate(r, fresh, { amount: 2_000_001n, category: 'tips', to: ADDR, timestamp: 150 }).reason).toBe('STAKE_CAP_EXCEEDED')
+  })
+  test('enforces cooldown between spends in a category (boundary: equal elapsed allowed)', () => {
+    const r = { ...rules, window: { start: 0, end: 2_000_000_000 }, cooldownSeconds: { tips: 60 } }
+    const state = { totalSpent: 0n, spentByCategory: {}, lastSpentAt: { tips: 1000 } }
+    expect(evaluate(r, state, { amount: 1n, category: 'tips', to: ADDR, timestamp: 1040 }).reason).toBe('COOLDOWN_ACTIVE')
+    expect(evaluate(r, state, { amount: 1n, category: 'tips', to: ADDR, timestamp: 1060 }).allowed).toBe(true)
+    expect(evaluate(r, state, { amount: 1n, category: 'merch', to: ADDR, timestamp: 1040 }).allowed).toBe(true)
+  })
 })

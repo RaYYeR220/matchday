@@ -32,3 +32,11 @@ test('rulesHash equals keccak256 of serializeRules', () => {
   const r: PolicyRules = { totalBudget: 100n, perCategoryCaps: { tips: 10n }, allowlist: [ADDR], window: { start: 1, end: 2 } }
   expect(rulesHash(r)).toBe(keccak256(serializeRules(r)))
 })
+
+test('cooldown and stake-cap fields change the rules hash', () => {
+  const base: PolicyRules = { totalBudget: 100n, perCategoryCaps: { tips: 10n }, allowlist: [ADDR], window: { start: 1, end: 2 } }
+  const withCd: PolicyRules = { ...base, cooldownSeconds: { tips: 30 } }
+  const withStake: PolicyRules = { ...base, perCategoryStakeCaps: { tips: 5n } }
+  expect(rulesHash(withCd)).not.toBe(rulesHash(base))
+  expect(rulesHash(withStake)).not.toBe(rulesHash(base))
+})

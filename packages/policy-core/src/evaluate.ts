@@ -11,6 +11,15 @@ export function evaluate(rules: PolicyRules, state: PolicyState, req: SpendReque
   const allow = new Set(rules.allowlist.map(normalizeAddress))
   if (!allow.has(normalizeAddress(req.to)))
     return { allowed: false, reason: 'DESTINATION_NOT_ALLOWED' }
+  const stakeCap = rules.perCategoryStakeCaps?.[req.category]
+  if (stakeCap !== undefined && req.amount > stakeCap)
+    return { allowed: false, reason: 'STAKE_CAP_EXCEEDED' }
+  const cooldown = rules.cooldownSeconds?.[req.category]
+  if (cooldown !== undefined && cooldown > 0) {
+    const last = state.lastSpentAt?.[req.category]
+    if (last !== undefined && req.timestamp - last < cooldown)
+      return { allowed: false, reason: 'COOLDOWN_ACTIVE' }
+  }
   if (state.totalSpent + req.amount > rules.totalBudget)
     return { allowed: false, reason: 'TOTAL_BUDGET_EXCEEDED' }
   const cap = rules.perCategoryCaps[req.category]
