@@ -23,3 +23,8 @@ ui-prototypes/
 mockups/
 design-ref/
 variants/
+
+# local tooling / screenshots
+.playwright-mcp/
+/*.jpeg
+/*.png
