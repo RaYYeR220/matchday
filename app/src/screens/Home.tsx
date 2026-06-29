@@ -36,6 +36,8 @@ export function Home({ budget, onHost }: { budget: number; onHost: () => void })
   const [busy, setBusy] = useState(false)
   const [poolFill, setPoolFill] = useState(0)
   useMemo(() => setTimeout(() => setPoolFill(59.75), 300), [])
+  const [goodOn, setGoodOn] = useState(true)
+  const [perGoal, setPerGoal] = useState(2)
 
   const cat = CATEGORIES.find((c) => c.key === catKey)!
   const rem = rules.totalBudget - st.totalSpent
@@ -66,6 +68,28 @@ export function Home({ budget, onHost }: { budget: number; onHost: () => void })
       } else {
         setResult({ ok: false, msg: 'Payment failed', sub: String((e as Error).message) })
       }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function goal() {
+    if (busy) return
+    if (!goodOn) {
+      setResult({ ok: false, msg: 'Goal-for-good is off', sub: 'Toggle it on to auto-donate when your team scores' })
+      return
+    }
+    setBusy(true)
+    setResult(null)
+    const base = BigInt(perGoal) * U
+    const req = { amount: base, category: 'good', to: PAYEE, timestamp: Math.floor(Date.now() / 1000) }
+    try {
+      const receipt = await guard.run('me', rules, req, () => wallet.transfer('arbitrum', { recipient: PAYEE, amount: base }))
+      setSt((s) => ({ ...s, totalSpent: s.totalSpent + base, spentByCategory: { ...s.spentByCategory, good: (s.spentByCategory.good ?? 0n) + base } }))
+      setResult({ ok: true, msg: `⚽ GOAL! Donated ${perGoal} USD₮ to Football for Good`, sub: `auto-rule · gasless · fee ${fmt(receipt.feeUsdt)} USD₮`, url: receipt.explorerUrl })
+    } catch (e) {
+      if (e instanceof PolicyViolationError) setResult({ ok: false, msg: 'Goal donation blocked', sub: FRIENDLY[e.reason] })
+      else setResult({ ok: false, msg: 'Failed', sub: String((e as Error).message) })
     } finally {
       setBusy(false)
     }
@@ -138,6 +162,20 @@ export function Home({ budget, onHost }: { budget: number; onHost: () => void })
           <div className="top"><b>🍻 Bombonera Watch Party</b><button className="tip" onClick={onHost}>Host a pool ›</button></div>
           <div className="track"><div className="fill" style={{ width: poolFill + '%' }} /></div>
           <div className="stat"><span><b>59.75</b> raised by 13 fans</span><span>goal 100 USD₮</span></div>
+        </div>
+
+        <div className="card g4g rise" style={{ animationDelay: '.32s' }}>
+          <div className="top">
+            <b>❤️ Goal-for-good</b>
+            <button className={'toggle ' + (goodOn ? 'on' : 'off')} onClick={() => setGoodOn((v) => !v)}>{goodOn ? 'On' : 'Off'}</button>
+          </div>
+          <p>Auto-donate to <b>Football for Good</b> every time ARG scores — counted against your budget.</p>
+          <div className="amts">
+            {[1, 2, 5].map((a) => (
+              <button key={a} className={perGoal === a ? 'on' : ''} onClick={() => setPerGoal(a)}>{a} USD₮ / goal</button>
+            ))}
+          </div>
+          <button className="simgoal" onClick={goal}>⚽ Simulate a goal</button>
         </div>
       </div>
 
