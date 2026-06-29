@@ -20,7 +20,8 @@ const FRIENDLY: Record<PolicyViolation, string> = {
   INVALID_AMOUNT: 'Enter an amount',
 }
 
-export function Home() {
+export function Home({ budget }: { budget: number }) {
+  const rules = useMemo(() => ({ ...RULES, totalBudget: BigInt(budget) * U }), [budget])
   const { guard, wallet } = useMemo(() => {
     const store = new InMemoryStateStore()
     void store.set('me', SEED_STATE)
@@ -37,11 +38,12 @@ export function Home() {
   useMemo(() => setTimeout(() => setPoolFill(59.75), 300), [])
 
   const cat = CATEGORIES.find((c) => c.key === catKey)!
-  const remaining = RULES.totalBudget - st.totalSpent
-  const spentPct = Number((st.totalSpent * 1000n) / RULES.totalBudget) / 10
-  const catCap = RULES.perCategoryCaps[catKey]
+  const rem = rules.totalBudget - st.totalSpent
+  const remaining = rem > 0n ? rem : 0n
+  const spentPct = Math.min(100, Number((st.totalSpent * 1000n) / rules.totalBudget) / 10)
+  const catCap = rules.perCategoryCaps[catKey]
   const catUsed = st.spentByCategory[catKey] ?? 0n
-  const merchNear = (RULES.perCategoryCaps.merch - (st.spentByCategory.merch ?? 0n)) <= 5n * U
+  const merchNear = (rules.perCategoryCaps.merch - (st.spentByCategory.merch ?? 0n)) <= 5n * U
 
   async function pay() {
     if (busy) return
@@ -50,7 +52,7 @@ export function Home() {
     const base = BigInt(amount) * U
     const req = { amount: base, category: catKey, to: PAYEE, timestamp: Math.floor(Date.now() / 1000) }
     try {
-      const receipt = await guard.run('me', RULES, req, () => wallet.transfer(chain, { recipient: PAYEE, amount: base }))
+      const receipt = await guard.run('me', rules, req, () => wallet.transfer(chain, { recipient: PAYEE, amount: base }))
       // reflect the advanced state
       setSt((s) => ({
         totalSpent: s.totalSpent + base,
@@ -96,7 +98,7 @@ export function Home() {
           <div className="meta">
             <h2>Matchday budget</h2>
             <p>Your spend cap for this match — rules enforced before every payment.</p>
-            <div className="chips"><span className="pchip spent">{fmt(st.totalSpent)} spent</span><span className="pchip left">{fmt(RULES.totalBudget)} cap</span></div>
+            <div className="chips"><span className="pchip spent">{fmt(st.totalSpent)} spent</span><span className="pchip left">{fmt(rules.totalBudget)} cap</span></div>
           </div>
         </div>
 
