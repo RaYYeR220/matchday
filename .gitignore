@@ -5,16 +5,16 @@ out/
 cache/
 broadcast/
 coverage/
+contracts/lib/
 .env
 .env.*
 !.env.example
 
-# internal / strategy — never publish
-BRIEF.md
-docs/superpowers/
+# internal / working — not part of the published project
+/docs/
 .remember/
-.claude/
 MEMORY.md
+BRIEF.md
 *-internal/
 *-backup*
 *.bundle
