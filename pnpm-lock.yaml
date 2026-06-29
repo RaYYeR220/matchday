@@ -21,6 +21,19 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9
 
+  packages/policy-guard:
+    dependencies:
+      '@matchday/policy-core':
+        specifier: workspace:*
+        version: link:../policy-core
+    devDependencies:
+      typescript:
+        specifier: ^5.6.0
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9
+
 packages:
 
   '@adraffy/ens-normalize@1.11.1':
