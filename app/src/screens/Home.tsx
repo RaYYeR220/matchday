@@ -20,7 +20,7 @@ const FRIENDLY: Record<PolicyViolation, string> = {
   INVALID_AMOUNT: 'Enter an amount',
 }
 
-export function Home({ budget }: { budget: number }) {
+export function Home({ budget, onHost }: { budget: number; onHost: () => void }) {
   const rules = useMemo(() => ({ ...RULES, totalBudget: BigInt(budget) * U }), [budget])
   const { guard, wallet } = useMemo(() => {
     const store = new InMemoryStateStore()
@@ -135,7 +135,7 @@ export function Home({ budget }: { budget: number }) {
         </div>
 
         <div className="card pool rise" style={{ animationDelay: '.26s' }}>
-          <div className="top"><b>🍻 Bombonera Watch Party</b><span className="tip">Group pot</span></div>
+          <div className="top"><b>🍻 Bombonera Watch Party</b><button className="tip" onClick={onHost}>Host a pool ›</button></div>
           <div className="track"><div className="fill" style={{ width: poolFill + '%' }} /></div>
           <div className="stat"><span><b>59.75</b> raised by 13 fans</span><span>goal 100 USD₮</span></div>
         </div>
