@@ -1,0 +1,17 @@
+{
+  "name": "@matchday/wallet-multichain",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tetherto/wdk-wallet-evm-erc-4337": "*",
+    "@tetherto/wdk-wallet-ton-gasless": "*",
+    "@tetherto/wdk-wallet-tron-gasfree": "*",
+    "viem": "^2.21.0"
+  },
+  "devDependencies": { "vitest": "^2.1.0", "typescript": "^5.6.0", "dotenv": "^16.4.0" }
+}
