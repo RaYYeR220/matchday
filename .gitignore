@@ -1,0 +1,25 @@
+# dependencies / build
+node_modules/
+dist/
+out/
+cache/
+broadcast/
+coverage/
+.env
+.env.*
+!.env.example
+
+# internal / strategy — never publish
+BRIEF.md
+docs/superpowers/
+.remember/
+.claude/
+MEMORY.md
+*-internal/
+*-backup*
+*.bundle
+spikes/
+ui-prototypes/
+mockups/
+design-ref/
+variants/
