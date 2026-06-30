@@ -21,7 +21,7 @@ const FRIENDLY: Record<PolicyViolation, string> = {
   INVALID_AMOUNT: 'Enter an amount',
 }
 
-export function Home({ budget, onHost }: { budget: number; onHost: () => void }) {
+export function Home({ budget, onHost, onWager, onSecond }: { budget: number; onHost: () => void; onWager: () => void; onSecond: () => void }) {
   const rules = useMemo(() => ({ ...RULES, totalBudget: BigInt(budget) * U }), [budget])
   const { guard, wallet } = useMemo(() => {
     const store = new InMemoryStateStore()
@@ -164,6 +164,14 @@ export function Home({ budget, onHost }: { budget: number; onHost: () => void })
           <div className="top"><b>🍻 Bombonera Watch Party</b><button className="tip" onClick={onHost}>Host a pool ›</button></div>
           <div className="track"><div className="fill" style={{ width: poolFill + '%' }} /></div>
           <div className="stat"><span><b>59.75</b> raised by 13 fans</span><span>goal 100 USD₮</span></div>
+        </div>
+
+        <div className="card more rise" style={{ animationDelay: '.29s' }}>
+          <div className="ctitle">More ways to play</div>
+          <div className="morerow">
+            <button className="morebtn wager" onClick={onWager}><span className="moreic">🎯</span><b>Friendly Wager</b><span>bet a mate · tilt-capped</span></button>
+            <button className="morebtn second" onClick={onSecond}><span className="moreic">🔓</span><b>Second Screen</b><span>x402 pay-per-view</span></button>
+          </div>
         </div>
 
         <div className="card g4g rise" style={{ animationDelay: '.32s' }}>

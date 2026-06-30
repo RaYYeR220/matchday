@@ -18,12 +18,27 @@ const U = 1_000_000n // 1 USD₮ (6 decimals)
 /** The rules the fan sets before the match — enforced before every payment. */
 export const RULES: PolicyRules = {
   totalBudget: 100n * U,
-  perCategoryCaps: { bar: 40n * U, cheers: 20n * U, merch: 30n * U, pool: 30n * U },
-  perCategoryStakeCaps: { cheers: 5n * U }, // no single cheer over 5 USD₮ (anti over-tip)
-  cooldownSeconds: { cheers: 30 }, // at most one cheer per 30s
+  perCategoryCaps: { bar: 40n * U, cheers: 20n * U, merch: 30n * U, pool: 30n * U, wager: 20n * U, unlock: 10n * U },
+  perCategoryStakeCaps: { cheers: 5n * U, wager: 5n * U }, // no single cheer/wager over 5 USD₮ (anti tilt)
+  cooldownSeconds: { cheers: 30, wager: 30 }, // at most one cheer/wager per 30s
   allowlist: [PAYEE],
   window: { start: 0, end: 4_000_000_000 },
 }
+
+/** Friendly P2P wagers — matched against another fan, winner takes the pot. Not a market:
+ *  the stake-cap and cooldown above keep it a bit of fun, not tilt-betting. */
+export const WAGERS = [
+  { id: 'arg-next', emoji: '🇦🇷', label: 'ARG scores next', payout: '1.8×' },
+  { id: 'fra-next', emoji: '🇫🇷', label: 'FRA scores next', payout: '2.1×' },
+  { id: 'over25', emoji: '⚽', label: 'Over 2.5 goals', payout: '1.6×' },
+]
+
+/** Second-screen premium content, unlocked pay-per-view with x402 — a tiny USD₮ tap, no sub. */
+export const PREMIUM = [
+  { id: 'xg', emoji: '📊', title: 'Live xG & shot map', blurb: 'Expected-goals feed + every shot, live.', price: 0.5, body: 'ARG 2.7 xG · FRA 1.4 xG · 18 shots, 7 on target' },
+  { id: 'tac', emoji: '🎥', title: 'Tactical cam', blurb: 'Wide tactical angle, full pitch.', price: 1, body: '▶ Tactical cam — full-pitch feed unlocked' },
+  { id: 'heat', emoji: '🔥', title: 'Player heatmaps', blurb: 'Live positioning for both XIs.', price: 0.5, body: 'Messi heatmap: right half-space, deep playmaking' },
+]
 
 /** Seeded mid-match state: 62 spent, Merch near its 30 cap. */
 export const SEED_STATE: PolicyState = {

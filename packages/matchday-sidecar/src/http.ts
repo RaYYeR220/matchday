@@ -74,5 +74,22 @@ async function handle(sc: MatchdaySidecar, req: IncomingMessage, res: ServerResp
     return send(res, 200, { receipt })
   }
 
+  // x402 second-screen
+  if (method === 'GET' && path === '/premium') return send(res, 200, { items: sc.premiumList() })
+
+  const seg = path.split('/').filter(Boolean) // ['premium', id, 'unlock'?]
+  if (seg[0] === 'premium' && seg[1]) {
+    const id = seg[1]
+    if (method === 'POST' && seg[2] === 'unlock') {
+      return send(res, 200, await sc.unlock(id)) // PolicyViolationError -> 409 via createServer
+    }
+    if (method === 'GET' && !seg[2]) {
+      if (sc.isUnlocked(id)) return send(res, 200, { unlocked: true, content: sc.unlockedContent(id) })
+      const reqs = sc.requirements(id)
+      if (!reqs) return send(res, 404, { error: 'not_found' })
+      return send(res, 402, reqs) // HTTP 402 Payment Required
+    }
+  }
+
   send(res, 404, { error: 'not_found' })
 }

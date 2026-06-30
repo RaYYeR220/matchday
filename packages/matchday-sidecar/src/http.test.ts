@@ -30,8 +30,19 @@ class FakeWallet implements MatchdayWalletLike {
 let server: Server
 let base: string
 
+const PREMIUM = { xg: { title: 'Live xG', price: 500_000n, content: 'secret-xg-feed' } }
+
 beforeAll(async () => {
-  const sc = new MatchdaySidecar({ wallet: new FakeWallet(), store: new InMemoryStateStore(), rules: RULES, userKey: 'me', now: () => 1_000_000 })
+  const sc = new MatchdaySidecar({
+    wallet: new FakeWallet(),
+    store: new InMemoryStateStore(),
+    rules: RULES,
+    userKey: 'me',
+    now: () => 1_000_000,
+    premium: PREMIUM,
+    payTo: PAYEE,
+    usdt: '0xUSDT',
+  })
   server = createServer(sc)
   await new Promise<void>((r) => server.listen(0, r))
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
@@ -90,6 +101,41 @@ describe('sidecar http', () => {
 
   it('unknown route is 404', async () => {
     const res = await fetch(`${base}/nope`)
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('sidecar x402 second-screen', () => {
+  it('GET /premium lists items', async () => {
+    const res = await fetch(`${base}/premium`)
+    const body = await res.json()
+    expect(body.items[0]).toMatchObject({ id: 'xg', unlocked: false, price: '500000' })
+  })
+
+  it('GET a locked resource answers 402 with x402 payment requirements', async () => {
+    const res = await fetch(`${base}/premium/xg`)
+    expect(res.status).toBe(402)
+    const body = await res.json()
+    expect(body.x402Version).toBe(1)
+    expect(body.accepts[0]).toMatchObject({ scheme: 'exact', network: 'arbitrum', maxAmountRequired: '500000', payTo: PAYEE })
+  })
+
+  it('POST unlock pays (policy-gated) and returns the content', async () => {
+    const res = await fetch(`${base}/premium/xg/unlock`, { method: 'POST' })
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.content).toBe('secret-xg-feed')
+    expect(body.receipt.explorerUrl).toContain('arbiscan')
+  })
+
+  it('GET the resource after unlocking returns 200 with the content', async () => {
+    const res = await fetch(`${base}/premium/xg`)
+    expect(res.status).toBe(200)
+    expect((await res.json()).content).toBe('secret-xg-feed')
+  })
+
+  it('GET an unknown resource is 404', async () => {
+    const res = await fetch(`${base}/premium/nope`)
     expect(res.status).toBe(404)
   })
 })
