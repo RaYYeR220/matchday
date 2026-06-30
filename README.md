@@ -21,6 +21,7 @@ A small monorepo of focused packages plus an on-chain enforcer:
 - **`policy-guard`** — runs `policy-core` before any spend and advances the per-user spend state only when the payment actually settles.
 - **`wallet-multichain`** — one seed across Arbitrum (ERC-4337 account abstraction), TON (gasless relay) and TRON (GasFree), behind a single `transfer` API, resolving each gasless payment to its settled on-chain transaction and explorer link.
 - **`sdk`** — the app-facing facade: policy-gated payments for fans and pool management for hosts.
+- **`sidecar`** — a small Node HTTP service that puts the real WDK-backed wallet behind the same policy guard. The wallet runs on Node, the app in the browser, so the sidecar bridges them: live balances, policy-gated **gasless payments**, and a live read of the deployed guard's on-chain state. The app uses it for its LIVE mode and falls back to a simulated demo when it isn't running.
 - **`contracts/MatchdayPolicyGuard.sol`** — a trustless on-chain enforcer. It stores a fan's committed rules and recomputes the **same rules hash** the wallet derives off-chain (identical ABI layout), so the on-device check and the on-chain check enforce byte-identical policy. `pay()` reverts on any window / allowlist / stake / cooldown / budget / category-cap violation.
 
 Gasless is handled per chain by the relevant standard — an ERC-4337 paymaster that accepts USDT for gas on Arbitrum, a sponsored relay on TON, and GasFree on TRON — so the fee is always denominated in USDT and the user never needs a native gas token.
@@ -36,6 +37,8 @@ Enforcement proven end-to-end on mainnet — both that valid spends go through a
 - **Rules committed on-chain** — [tx `0x98f4ade3…a72f793`](https://arbiscan.io/tx/0x98f4ade3230a74fd28485139250e2a9eb030b859a627c24fed722d196a72f793)
 - **Valid spend within policy → succeeds, moves real USDT** — [tx `0x8ac860e6…ebdaa83b`](https://arbiscan.io/tx/0x8ac860e618f5530957fccc93dae0bf4294f774ec53146d5fc5ca56d3ebdaa83b) (0.1 USDT under the Bar & Food cap; emits `Paid`, advances on-chain spend state)
 - **Over-cap and over-stake spends revert** with `CategoryCapExceeded` / `StakeCapExceeded` — covered by the contract test suite and verified against the live deployment.
+
+And the rails work end-to-end from the UI: with the sidecar running, a payment fired from the app is a **real gasless USD₮ transfer on Arbitrum** — e.g. [tx `0xea5192d6…26cd3a2e67`](https://arbiscan.io/tx/0xea5192d652387448890008dd4b334839fee03fcf63e3119e86d2a726cd3a2e67) (paid via an ERC-4337 UserOp, fee in USD₮, no native gas token).
 
 ## Develop
 
@@ -54,6 +57,24 @@ cd contracts
 forge install foundry-rs/forge-std   # first checkout only
 forge test                           # rules-hash bridge + fuzz invariants
 ```
+
+### Run the app
+
+```bash
+pnpm --filter @matchday/app dev      # the wallet UI / PWA / Telegram Mini-App
+```
+
+The app runs standalone with a simulated demo. To switch on LIVE mode — real
+balances and real gasless payments — also run the backend:
+
+```bash
+cd packages/matchday-sidecar
+cp .env.example .env                 # add a seed; the file is gitignored
+pnpm start                           # serves http://127.0.0.1:8787
+```
+
+With the sidecar up, the app shows a LIVE panel that reads on-chain balances and
+the deployed guard, and can fire a real gasless USD₮ payment on Arbitrum.
 
 ## License
 
