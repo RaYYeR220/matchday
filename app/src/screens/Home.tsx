@@ -3,6 +3,7 @@ import { InMemoryStateStore, PolicyGuard, PolicyViolationError } from '@matchday
 import type { PolicyState, PolicyViolation } from '@matchday/policy-core'
 import type { Chain } from '@matchday/wallet-multichain'
 import { BALANCES, CATEGORIES, CHAINS, DemoWallet, fmt, PAYEE, RULES, SEED_STATE } from '../data'
+import { LivePanel } from './LivePanel'
 
 const U = 1_000_000n
 const AMOUNTS = [1, 5, 10, 25]
@@ -109,6 +110,7 @@ export function Home({ budget, onHost }: { budget: number; onHost: () => void })
       </header>
 
       <div className="scroll">
+        <LivePanel />
         <div className="card budget rise" style={{ animationDelay: '.05s' }}>
           <div className="ring">
             <svg width="104" height="104" viewBox="0 0 104 104">
