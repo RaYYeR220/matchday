@@ -12,6 +12,10 @@ Paying with stablecoins at a watch party should feel like tapping a card — not
 - **Spend policy, enforced twice.** Set a matchday budget, per-category caps (🍺 Bar & Food · 📣 Cheers · 🧣 Merch · 🤝 Group Pot), per-tap stake caps, cooldowns, an allowlist of who you can pay, and a time window. The wallet checks every spend **on-device**, and a deployed contract re-checks it **on-chain** — a payment that breaks a rule is rejected even if it carries a valid signature.
 - **Goal-for-good.** Pledge an auto-donation to an allowlisted cause on every goal — a hands-free spend that still passes the same policy gate.
 - **Host pools.** Spin up a fan-pool or watch-party tip-jar that receives USDT, with a shareable link and live progress toward a target.
+- **Friendly Wager.** A P2P bet matched with another fan — the per-tap stake cap and cooldown keep it a bit of fun, not tilt-betting.
+- **Second Screen.** Unlock premium match content pay-per-view with [x402](https://www.x402.org/) (HTTP 402 Payment Required) — each unlock is a gasless, policy-checked tap, no subscription.
+
+Every one of these is the *same* policy-gated, gasless engine — not a pile of separate features.
 
 ## Architecture
 
