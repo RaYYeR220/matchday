@@ -2,6 +2,13 @@
 
 A self-custodial, **gasless USDT wallet for the tournament moment**. Set a matchday budget, tap to pay across chains, and every spend is checked against rules you set up front — bar tabs, player cheers, merch and group pots — with the keys never leaving your device. The same rules are also enforced **on-chain**, so not even your own signature can push you past a cap. Built on the [Tether Wallet Development Kit](https://docs.wdk.tether.io/).
 
+## Try it
+
+- **Web app:** https://matchday-rayyer220s-projects.vercel.app
+- **Telegram Mini-App:** [@matchdaywalletbot](https://t.me/matchdaywalletbot) → tap the menu button to open it
+
+The hosted app runs a self-contained demo (no keys, no backend). To see real gasless payments move USDT on Arbitrum from the UI, run the [sidecar](./packages/matchday-sidecar) locally — or verify the on-chain proof transactions below, which are permanent.
+
 ## Why
 
 Paying with stablecoins at a watch party should feel like tapping a card — not juggling a native gas token, a seed phrase, and three different chains. Matchday makes USDT payments **gasless** (the fee comes out of the USDT itself), **self-custodial** (one seed, keys on device), and **safe by default** (a budget and rules you set up front, enforced before anything is signed — and again on-chain).
