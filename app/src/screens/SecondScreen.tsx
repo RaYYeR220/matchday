@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { InMemoryStateStore, PolicyGuard, PolicyViolationError } from '@matchday/policy-guard'
 import { emptyState, type PolicyState } from '@matchday/policy-core'
-import { fmt, PAYEE, PREMIUM, RULES, toBase } from '../data'
+import { ACTIVE, fmt, PAYEE, toBase } from '../data'
 import type { WdkBrowserWallet } from '../wallet/wdkWallet'
+
+const UNLOCK_CAP = ACTIVE.rules.perCategoryCaps.unlock
 
 export function SecondScreen({ wallet, onBack }: { wallet: WdkBrowserWallet; onBack: () => void }) {
   const guard = useMemo(() => new PolicyGuard(new InMemoryStateStore()), [])
@@ -20,11 +22,11 @@ export function SecondScreen({ wallet, onBack }: { wallet: WdkBrowserWallet; onB
     const req = { amount: base, category: 'unlock', to: PAYEE, timestamp: Math.floor(Date.now() / 1000) }
     try {
       // x402: the resource answers 402 Payment Required, we pay (gasless, policy-checked), then it opens.
-      const receipt = await guard.run('me', RULES, req, () => wallet.transfer('arbitrum', { recipient: PAYEE, amount: base }))
+      const receipt = await guard.run('me', ACTIVE.rules, req, () => wallet.transfer('arbitrum', { recipient: PAYEE, amount: base }))
       setSt((s) => ({ totalSpent: s.totalSpent + base, spentByCategory: { ...s.spentByCategory, unlock: (s.spentByCategory.unlock ?? 0n) + base }, lastSpentAt: s.lastSpentAt ?? {} }))
       setUnlocked((u) => ({ ...u, [id]: receipt.explorerUrl }))
     } catch (e) {
-      if (e instanceof PolicyViolationError) setErr(e.reason === 'CATEGORY_CAP_EXCEEDED' ? 'That blows your 1 USD₮ unlock cap' : 'Blocked by your rules')
+      if (e instanceof PolicyViolationError) setErr(e.reason === 'CATEGORY_CAP_EXCEEDED' ? `That blows your ${fmt(UNLOCK_CAP)} USD₮ unlock cap` : 'Blocked by your rules')
       else setErr('Unlock failed')
     } finally { setBusy(null) }
   }
@@ -38,12 +40,12 @@ export function SecondScreen({ wallet, onBack }: { wallet: WdkBrowserWallet; onB
           <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-soft)', lineHeight: 1.45 }}>
             Unlock premium match content with a tiny USD₮ tap — powered by <b>x402</b> (HTTP 402 Payment Required). Each unlock is a gasless payment your rules check first. No subscription, pay only for what you open.
           </p>
-          <div className="guard" style={{ marginTop: 12 }}>🛡️ <span>Unlocks capped at <b>1 USD₮</b> for the match · {fmt(used)}/1 used</span></div>
+          <div className="guard" style={{ marginTop: 12 }}>🛡️ <span>Unlocks capped at <b>{fmt(UNLOCK_CAP)} USD₮</b> for the match · {fmt(used)}/{fmt(UNLOCK_CAP)} used</span></div>
         </div>
 
         {err && <div className="result bad" style={{ position: 'static', margin: '0 0 4px' }}><span>🛡️</span><span>{err}</span></div>}
 
-        {PREMIUM.map((p, i) => {
+        {ACTIVE.premium.map((p, i) => {
           const open = unlocked[p.id]
           return (
             <div key={p.id} className={'card prem rise' + (open ? ' open' : '')} style={{ animationDelay: 0.06 * (i + 1) + 's' }}>

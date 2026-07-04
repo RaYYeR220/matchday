@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { InMemoryStateStore, PolicyGuard, PolicyViolationError } from '@matchday/policy-guard'
 import { emptyState, type PolicyState, type PolicyViolation } from '@matchday/policy-core'
-import { CATEGORIES, fmt, PAYEE, RULES, toBase } from '../data'
+import { ACTIVE, CATEGORIES, fmt, PAYEE, toBase } from '../data'
 import type { WdkBrowserWallet } from '../wallet/wdkWallet'
 
-const U = 1_000_000n
-const AMOUNTS = [0.1, 0.25, 0.5, 1]
+const AMOUNTS = ACTIVE.amounts
 const RING = 289 // 2πr, r=46
 
 type Result = { ok: true; msg: string; sub: string; url: string } | { ok: false; msg: string; sub: string } | null
@@ -23,10 +22,10 @@ const FRIENDLY: Record<PolicyViolation, string> = {
 const short = (a: string) => a.slice(0, 6) + '…' + a.slice(-4)
 
 export function Home({ budget, wallet, onHost, onWager, onSecond }: { budget: number; wallet: WdkBrowserWallet; onHost: () => void; onWager: () => void; onSecond: () => void }) {
-  const rules = useMemo(() => ({ ...RULES, totalBudget: toBase(budget) }), [budget])
+  const rules = useMemo(() => ({ ...ACTIVE.rules, totalBudget: toBase(budget) }), [budget])
   const guard = useMemo(() => new PolicyGuard(new InMemoryStateStore()), [])
 
-  const [amount, setAmount] = useState(0.25)
+  const [amount, setAmount] = useState(ACTIVE.amounts[1])
   const [catKey, setCatKey] = useState('bar')
   const [st, setSt] = useState<PolicyState>(emptyState())
   const [result, setResult] = useState<Result>(null)
@@ -35,7 +34,7 @@ export function Home({ budget, wallet, onHost, onWager, onSecond }: { budget: nu
   const [balance, setBalance] = useState<bigint | null>(null)
   const [copied, setCopied] = useState(false)
   const [goodOn, setGoodOn] = useState(true)
-  const [perGoal, setPerGoal] = useState(0.25)
+  const [perGoal, setPerGoal] = useState(ACTIVE.goalAmounts[1])
 
   async function refreshBalance() {
     try { setBalance(await wallet.getUsdtBalance('arbitrum')) } catch { /* keep */ }
@@ -51,7 +50,7 @@ export function Home({ budget, wallet, onHost, onWager, onSecond }: { budget: nu
   const spentPct = Math.min(100, Number((st.totalSpent * 1000n) / rules.totalBudget) / 10)
   const catCap = rules.perCategoryCaps[catKey]
   const catUsed = st.spentByCategory[catKey] ?? 0n
-  const merchNear = rules.perCategoryCaps.merch - (st.spentByCategory.merch ?? 0n) <= 250_000n
+  const merchNear = rules.perCategoryCaps.merch - (st.spentByCategory.merch ?? 0n) <= rules.perCategoryCaps.merch / 6n
 
   async function payReal(base: bigint, category: string, onOk: (url: string, fee: bigint) => void) {
     const req = { amount: base, category, to: PAYEE, timestamp: Math.floor(Date.now() / 1000) }
@@ -146,7 +145,7 @@ export function Home({ budget, wallet, onHost, onWager, onSecond }: { budget: nu
             ))}
           </div>
           <div className="recip"><span>To</span><b>{cat.payee}</b></div>
-          <div className="guard">🛡️ <span>Your rules keep spending safe — <b>{cat.label}</b> {fmt(catUsed)}/{fmt(catCap)} used{catKey === 'cheers' ? ' · max 0.5/tap · 30s cooldown' : ''}</span></div>
+          <div className="guard">🛡️ <span>Your rules keep spending safe — <b>{cat.label}</b> {fmt(catUsed)}/{fmt(catCap)} used{catKey === 'cheers' ? ` · max ${fmt(rules.perCategoryStakeCaps!.cheers)}/tap · 30s cooldown` : ''}</span></div>
         </div>
 
         <div className="card pool rise" style={{ animationDelay: '.26s' }}>
@@ -170,7 +169,7 @@ export function Home({ budget, wallet, onHost, onWager, onSecond }: { budget: nu
           </div>
           <p>Auto-donate to <b>Football for Good</b> every time ARG scores — counted against your budget.</p>
           <div className="amts">
-            {[0.1, 0.25, 0.5].map((a) => <button key={a} className={perGoal === a ? 'on' : ''} onClick={() => setPerGoal(a)}>{a} USD₮ / goal</button>)}
+            {ACTIVE.goalAmounts.map((a) => <button key={a} className={perGoal === a ? 'on' : ''} onClick={() => setPerGoal(a)}>{a} USD₮ / goal</button>)}
           </div>
           <button className="simgoal" onClick={goal}>⚽ Simulate a goal</button>
         </div>

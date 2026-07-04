@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react'
 import { InMemoryStateStore, PolicyGuard, PolicyViolationError } from '@matchday/policy-guard'
 import { emptyState, type PolicyState, type PolicyViolation } from '@matchday/policy-core'
-import { fmt, PAYEE, RULES, toBase, WAGERS } from '../data'
+import { ACTIVE, fmt, PAYEE, toBase, WAGERS } from '../data'
 import type { WdkBrowserWallet } from '../wallet/wdkWallet'
 
-const STAKES = [0.1, 0.25, 0.5, 0.8] // 0.8 trips the 0.5 USD₮ tilt-cap on purpose
+const STAKES = ACTIVE.stakes // last preset trips the per-tap tilt-cap on purpose
+const STAKE_CAP = ACTIVE.rules.perCategoryStakeCaps!.wager
+const overStake = Number(fmt(STAKE_CAP))
 
 const FRIENDLY: Record<PolicyViolation, string> = {
-  CATEGORY_CAP_EXCEEDED: 'That blows your 1 USD₮ wager cap for the match',
-  STAKE_CAP_EXCEEDED: 'Over your 0.5 USD₮ per-wager tilt-cap',
+  CATEGORY_CAP_EXCEEDED: `That blows your ${fmt(ACTIVE.rules.perCategoryCaps.wager)} USD₮ wager cap for the match`,
+  STAKE_CAP_EXCEEDED: `Over your ${fmt(STAKE_CAP)} USD₮ per-wager tilt-cap`,
   COOLDOWN_ACTIVE: 'Cooling down — no tilt-betting, wait a moment',
   TOTAL_BUDGET_EXCEEDED: 'Over your matchday budget',
   DESTINATION_NOT_ALLOWED: 'Pot not on your allow-list',
@@ -21,7 +23,7 @@ type Result = { ok: true; msg: string; sub: string; url: string } | { ok: false;
 export function Wager({ wallet, onBack }: { wallet: WdkBrowserWallet; onBack: () => void }) {
   const guard = useMemo(() => new PolicyGuard(new InMemoryStateStore()), [])
   const [pick, setPick] = useState(WAGERS[0].id)
-  const [stake, setStake] = useState(0.25)
+  const [stake, setStake] = useState(ACTIVE.stakes[1])
   const [st, setSt] = useState<PolicyState>(emptyState())
   const [result, setResult] = useState<Result>(null)
   const [busy, setBusy] = useState(false)
@@ -35,7 +37,7 @@ export function Wager({ wallet, onBack }: { wallet: WdkBrowserWallet; onBack: ()
     const base = toBase(stake)
     const req = { amount: base, category: 'wager', to: PAYEE, timestamp: Math.floor(Date.now() / 1000) }
     try {
-      const receipt = await guard.run('me', RULES, req, () => wallet.transfer('arbitrum', { recipient: PAYEE, amount: base }))
+      const receipt = await guard.run('me', ACTIVE.rules, req, () => wallet.transfer('arbitrum', { recipient: PAYEE, amount: base }))
       setSt((s) => ({
         totalSpent: s.totalSpent + base,
         spentByCategory: { ...s.spentByCategory, wager: (s.spentByCategory.wager ?? 0n) + base },
@@ -43,7 +45,7 @@ export function Wager({ wallet, onBack }: { wallet: WdkBrowserWallet; onBack: ()
       }))
       setResult({ ok: true, msg: `Matched! ${w.emoji} ${w.label}`, sub: `staked ${stake} USD₮ vs a fan · pot ${stake * 2} USD₮ · gasless · fee ${fmt(receipt.feeUsdt)} USD₮`, url: receipt.explorerUrl })
     } catch (e) {
-      if (e instanceof PolicyViolationError) setResult({ ok: false, msg: FRIENDLY[e.reason], sub: `🎯 Wager ${fmt(wagered)}/1 used · 0.5 USD₮ per tap · 30s cooldown` })
+      if (e instanceof PolicyViolationError) setResult({ ok: false, msg: FRIENDLY[e.reason], sub: `🎯 Wager ${fmt(wagered)}/${fmt(ACTIVE.rules.perCategoryCaps.wager)} used · ${fmt(STAKE_CAP)} USD₮ per tap · 30s cooldown` })
       else setResult({ ok: false, msg: 'Wager failed', sub: String((e as Error).message) })
     } finally { setBusy(false) }
   }
@@ -55,7 +57,7 @@ export function Wager({ wallet, onBack }: { wallet: WdkBrowserWallet; onBack: ()
         <div className="card rise">
           <div className="ctitle">A bit of fun with a mate</div>
           <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink-soft)', lineHeight: 1.45 }}>
-            Take a side, get matched with a fan on the other — winner takes the pot. Not a market: your rules cap each stake at <b>0.5 USD₮</b> and add a <b>30s cooldown</b> so a bad call can't spiral.
+            Take a side, get matched with a fan on the other — winner takes the pot. Not a market: your rules cap each stake at <b>{fmt(STAKE_CAP)} USD₮</b> and add a <b>30s cooldown</b> so a bad call can't spiral.
           </p>
         </div>
 
@@ -74,9 +76,9 @@ export function Wager({ wallet, onBack }: { wallet: WdkBrowserWallet; onBack: ()
           <div className="ctitle">Your stake</div>
           <div className="amountrow"><span className="a">{stake}</span><span className="u">USD₮</span></div>
           <div className="amts">
-            {STAKES.map((a) => <button key={a} className={(stake === a ? 'on' : '') + (a > 0.5 ? ' over' : '')} onClick={() => setStake(a)}>{a}</button>)}
+            {STAKES.map((a) => <button key={a} className={(stake === a ? 'on' : '') + (a > overStake ? ' over' : '')} onClick={() => setStake(a)}>{a}</button>)}
           </div>
-          <div className="guard">🎯 <span>Wager rules — <b>0.5 USD₮</b> max per tap · 30s cooldown · {fmt(wagered)}/1 USD₮ wagered</span></div>
+          <div className="guard">🎯 <span>Wager rules — <b>{fmt(STAKE_CAP)} USD₮</b> max per tap · 30s cooldown · {fmt(wagered)}/{fmt(ACTIVE.rules.perCategoryCaps.wager)} USD₮ wagered</span></div>
         </div>
       </div>
 

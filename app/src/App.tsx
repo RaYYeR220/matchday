@@ -7,17 +7,17 @@ import { Wager } from './screens/Wager'
 import { SecondScreen } from './screens/SecondScreen'
 import { WalletGate } from './screens/WalletGate'
 import { WdkBrowserWallet } from './wallet/wdkWallet'
+import { ACTIVE, NETWORK } from './data'
 
 type Screen = 'intro' | 'wallet' | 'setup' | 'home' | 'host' | 'wager' | 'second'
 
 export function App() {
   const [screen, setScreen] = useState<Screen>('intro')
-  const [budget, setBudget] = useState(5)
+  const [budget, setBudget] = useState(ACTIVE.defaultBudget)
   const [wallet, setWallet] = useState<WdkBrowserWallet | null>(null)
 
   function onReady(mnemonic: string, returning: boolean) {
-    setWallet(new WdkBrowserWallet(mnemonic))
-    // A returning user goes straight to their wallet; a new user picks their rules first.
+    setWallet(new WdkBrowserWallet(mnemonic, NETWORK))
     setScreen(returning ? 'home' : 'setup')
   }
 
