@@ -1,12 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { InMemoryStateStore, PolicyGuard, PolicyViolationError } from '@matchday/policy-guard'
-import type { PolicyState, PolicyViolation } from '@matchday/policy-core'
-import type { Chain } from '@matchday/wallet-multichain'
-import { BALANCES, CATEGORIES, CHAINS, DemoWallet, fmt, PAYEE, RULES, SEED_STATE } from '../data'
-import { LivePanel } from './LivePanel'
+import { emptyState, type PolicyState, type PolicyViolation } from '@matchday/policy-core'
+import { CATEGORIES, fmt, PAYEE, RULES, toBase } from '../data'
+import type { WdkBrowserWallet } from '../wallet/wdkWallet'
 
 const U = 1_000_000n
-const AMOUNTS = [1, 5, 10, 25]
+const AMOUNTS = [0.1, 0.25, 0.5, 1]
 const RING = 289 // 2πr, r=46
 
 type Result = { ok: true; msg: string; sub: string; url: string } | { ok: false; msg: string; sub: string } | null
@@ -21,24 +20,30 @@ const FRIENDLY: Record<PolicyViolation, string> = {
   INVALID_AMOUNT: 'Enter an amount',
 }
 
-export function Home({ budget, onHost, onWager, onSecond }: { budget: number; onHost: () => void; onWager: () => void; onSecond: () => void }) {
-  const rules = useMemo(() => ({ ...RULES, totalBudget: BigInt(budget) * U }), [budget])
-  const { guard, wallet } = useMemo(() => {
-    const store = new InMemoryStateStore()
-    void store.set('me', SEED_STATE)
-    return { guard: new PolicyGuard(store), wallet: new DemoWallet(), store }
-  }, [])
+const short = (a: string) => a.slice(0, 6) + '…' + a.slice(-4)
 
-  const [amount, setAmount] = useState(5)
+export function Home({ budget, wallet, onHost, onWager, onSecond }: { budget: number; wallet: WdkBrowserWallet; onHost: () => void; onWager: () => void; onSecond: () => void }) {
+  const rules = useMemo(() => ({ ...RULES, totalBudget: toBase(budget) }), [budget])
+  const guard = useMemo(() => new PolicyGuard(new InMemoryStateStore()), [])
+
+  const [amount, setAmount] = useState(0.25)
   const [catKey, setCatKey] = useState('bar')
-  const [chain, setChain] = useState<Chain>('arbitrum')
-  const [st, setSt] = useState<PolicyState>(SEED_STATE)
+  const [st, setSt] = useState<PolicyState>(emptyState())
   const [result, setResult] = useState<Result>(null)
   const [busy, setBusy] = useState(false)
-  const [poolFill, setPoolFill] = useState(0)
-  useMemo(() => setTimeout(() => setPoolFill(59.75), 300), [])
+  const [address, setAddress] = useState('')
+  const [balance, setBalance] = useState<bigint | null>(null)
+  const [copied, setCopied] = useState(false)
   const [goodOn, setGoodOn] = useState(true)
-  const [perGoal, setPerGoal] = useState(2)
+  const [perGoal, setPerGoal] = useState(0.25)
+
+  async function refreshBalance() {
+    try { setBalance(await wallet.getUsdtBalance('arbitrum')) } catch { /* keep */ }
+  }
+  useEffect(() => {
+    wallet.address().then(setAddress).catch(() => {})
+    void refreshBalance()
+  }, [wallet])
 
   const cat = CATEGORIES.find((c) => c.key === catKey)!
   const rem = rules.totalBudget - st.totalSpent
@@ -46,54 +51,43 @@ export function Home({ budget, onHost, onWager, onSecond }: { budget: number; on
   const spentPct = Math.min(100, Number((st.totalSpent * 1000n) / rules.totalBudget) / 10)
   const catCap = rules.perCategoryCaps[catKey]
   const catUsed = st.spentByCategory[catKey] ?? 0n
-  const merchNear = (rules.perCategoryCaps.merch - (st.spentByCategory.merch ?? 0n)) <= 5n * U
+  const merchNear = rules.perCategoryCaps.merch - (st.spentByCategory.merch ?? 0n) <= 250_000n
+
+  async function payReal(base: bigint, category: string, onOk: (url: string, fee: bigint) => void) {
+    const req = { amount: base, category, to: PAYEE, timestamp: Math.floor(Date.now() / 1000) }
+    const receipt = await guard.run('me', rules, req, () => wallet.transfer('arbitrum', { recipient: PAYEE, amount: base }))
+    setSt((s) => ({
+      totalSpent: s.totalSpent + base,
+      spentByCategory: { ...s.spentByCategory, [category]: (s.spentByCategory[category] ?? 0n) + base },
+      lastSpentAt: { ...(s.lastSpentAt ?? {}), [category]: req.timestamp },
+    }))
+    void refreshBalance()
+    onOk(receipt.explorerUrl, receipt.feeUsdt)
+  }
 
   async function pay() {
     if (busy) return
-    setBusy(true)
-    setResult(null)
-    const base = BigInt(amount) * U
-    const req = { amount: base, category: catKey, to: PAYEE, timestamp: Math.floor(Date.now() / 1000) }
+    setBusy(true); setResult(null)
     try {
-      const receipt = await guard.run('me', rules, req, () => wallet.transfer(chain, { recipient: PAYEE, amount: base }))
-      // reflect the advanced state
-      setSt((s) => ({
-        totalSpent: s.totalSpent + base,
-        spentByCategory: { ...s.spentByCategory, [catKey]: (s.spentByCategory[catKey] ?? 0n) + base },
-        lastSpentAt: { ...(s.lastSpentAt ?? {}), [catKey]: req.timestamp },
-      }))
-      setResult({ ok: true, msg: `Paid ${amount} USD₮ to ${cat.payee}`, sub: `gasless · fee ${fmt(receipt.feeUsdt)} USD₮ on ${chain}`, url: receipt.explorerUrl })
+      await payReal(toBase(amount), catKey, (url, fee) =>
+        setResult({ ok: true, msg: `Paid ${amount} USD₮ to ${cat.payee}`, sub: `gasless · fee ${fmt(fee)} USD₮ on Arbitrum`, url }))
     } catch (e) {
-      if (e instanceof PolicyViolationError) {
-        setResult({ ok: false, msg: FRIENDLY[e.reason], sub: `${cat.icon} ${cat.label} · ${fmt(catUsed)}/${fmt(catCap)} used` })
-      } else {
-        setResult({ ok: false, msg: 'Payment failed', sub: String((e as Error).message) })
-      }
-    } finally {
-      setBusy(false)
-    }
+      if (e instanceof PolicyViolationError) setResult({ ok: false, msg: FRIENDLY[e.reason], sub: `${cat.icon} ${cat.label} · ${fmt(catUsed)}/${fmt(catCap)} used` })
+      else setResult({ ok: false, msg: 'Payment failed', sub: String((e as Error).message) })
+    } finally { setBusy(false) }
   }
 
   async function goal() {
     if (busy) return
-    if (!goodOn) {
-      setResult({ ok: false, msg: 'Goal-for-good is off', sub: 'Toggle it on to auto-donate when your team scores' })
-      return
-    }
-    setBusy(true)
-    setResult(null)
-    const base = BigInt(perGoal) * U
-    const req = { amount: base, category: 'good', to: PAYEE, timestamp: Math.floor(Date.now() / 1000) }
+    if (!goodOn) return setResult({ ok: false, msg: 'Goal-for-good is off', sub: 'Toggle it on to auto-donate when your team scores' })
+    setBusy(true); setResult(null)
     try {
-      const receipt = await guard.run('me', rules, req, () => wallet.transfer('arbitrum', { recipient: PAYEE, amount: base }))
-      setSt((s) => ({ ...s, totalSpent: s.totalSpent + base, spentByCategory: { ...s.spentByCategory, good: (s.spentByCategory.good ?? 0n) + base } }))
-      setResult({ ok: true, msg: `⚽ GOAL! Donated ${perGoal} USD₮ to Football for Good`, sub: `auto-rule · gasless · fee ${fmt(receipt.feeUsdt)} USD₮`, url: receipt.explorerUrl })
+      await payReal(toBase(perGoal), 'good', (url, fee) =>
+        setResult({ ok: true, msg: `⚽ GOAL! Donated ${perGoal} USD₮ to Football for Good`, sub: `auto-rule · gasless · fee ${fmt(fee)} USD₮`, url }))
     } catch (e) {
       if (e instanceof PolicyViolationError) setResult({ ok: false, msg: 'Goal donation blocked', sub: FRIENDLY[e.reason] })
       else setResult({ ok: false, msg: 'Failed', sub: String((e as Error).message) })
-    } finally {
-      setBusy(false)
-    }
+    } finally { setBusy(false) }
   }
 
   return (
@@ -110,7 +104,6 @@ export function Home({ budget, onHost, onWager, onSecond }: { budget: number; on
       </header>
 
       <div className="scroll">
-        <LivePanel />
         <div className="card budget rise" style={{ animationDelay: '.05s' }}>
           <div className="ring">
             <svg width="104" height="104" viewBox="0 0 104 104">
@@ -129,24 +122,20 @@ export function Home({ budget, onHost, onWager, onSecond }: { budget: number; on
         </div>
 
         <div className="card rise" style={{ animationDelay: '.12s' }}>
-          <div className="ctitle">Pay from · multi-chain USD₮</div>
-          {CHAINS.map((c) => (
-            <div key={c.key} className={'bal' + (chain === c.key ? ' sel' : '')} onClick={() => setChain(c.key)} style={{ cursor: 'pointer' }}>
-              <div className={'coin ' + c.cls}>{c.coin}</div>
-              <div className="nm"><b>{c.label}</b><span>{c.addr}</span></div>
-              <div className="amt">{fmt(BALANCES[c.key])}<small> USD₮</small></div>
-            </div>
-          ))}
-          <div className="gasless">⚡ Gasless <span>· fee paid in USD₮ · no native gas token needed</span></div>
+          <div className="ctitle">Your wallet · self-custodial on Arbitrum</div>
+          <div className="bal sel">
+            <div className="coin arb">AR</div>
+            <div className="nm"><b>Arbitrum USD₮</b><span onClick={() => { navigator.clipboard?.writeText(address); setCopied(true); setTimeout(() => setCopied(false), 1200) }} style={{ cursor: 'pointer' }}>{copied ? 'copied ✓' : (address ? short(address) : '…')}</span></div>
+            <div className="amt">{balance === null ? '…' : fmt(balance)}<small> USD₮</small></div>
+          </div>
+          <div className="gasless">⚡ Gasless <span>· fee paid in USD₮ · WDK signs on this device · no gas token</span></div>
         </div>
 
         <div className="card rise" style={{ animationDelay: '.19s' }}>
           <div className="ctitle">Tap to pay</div>
-          <div className="amountrow"><span className="a">{amount}.00</span><span className="u">USD₮</span></div>
+          <div className="amountrow"><span className="a">{amount}</span><span className="u">USD₮</span></div>
           <div className="amts">
-            {AMOUNTS.map((a) => (
-              <button key={a} className={amount === a ? 'on' : ''} onClick={() => setAmount(a)}>{a}</button>
-            ))}
+            {AMOUNTS.map((a) => <button key={a} className={amount === a ? 'on' : ''} onClick={() => setAmount(a)}>{a}</button>)}
           </div>
           <div className="cats">
             {CATEGORIES.map((c) => (
@@ -157,12 +146,12 @@ export function Home({ budget, onHost, onWager, onSecond }: { budget: number; on
             ))}
           </div>
           <div className="recip"><span>To</span><b>{cat.payee}</b></div>
-          <div className="guard">🛡️ <span>Your rules keep spending safe — <b>{cat.label}</b> {fmt(catUsed)}/{fmt(catCap)} used{catKey === 'cheers' ? ' · max 5/ tap · 30s cooldown' : ''}</span></div>
+          <div className="guard">🛡️ <span>Your rules keep spending safe — <b>{cat.label}</b> {fmt(catUsed)}/{fmt(catCap)} used{catKey === 'cheers' ? ' · max 0.5/tap · 30s cooldown' : ''}</span></div>
         </div>
 
         <div className="card pool rise" style={{ animationDelay: '.26s' }}>
           <div className="top"><b>🍻 Bombonera Watch Party</b><button className="tip" onClick={onHost}>Host a pool ›</button></div>
-          <div className="track"><div className="fill" style={{ width: poolFill + '%' }} /></div>
+          <div className="track"><div className="fill" style={{ width: '59.75%' }} /></div>
           <div className="stat"><span><b>59.75</b> raised by 13 fans</span><span>goal 100 USD₮</span></div>
         </div>
 
@@ -181,9 +170,7 @@ export function Home({ budget, onHost, onWager, onSecond }: { budget: number; on
           </div>
           <p>Auto-donate to <b>Football for Good</b> every time ARG scores — counted against your budget.</p>
           <div className="amts">
-            {[1, 2, 5].map((a) => (
-              <button key={a} className={perGoal === a ? 'on' : ''} onClick={() => setPerGoal(a)}>{a} USD₮ / goal</button>
-            ))}
+            {[0.1, 0.25, 0.5].map((a) => <button key={a} className={perGoal === a ? 'on' : ''} onClick={() => setPerGoal(a)}>{a} USD₮ / goal</button>)}
           </div>
           <button className="simgoal" onClick={goal}>⚽ Simulate a goal</button>
         </div>
@@ -197,8 +184,8 @@ export function Home({ budget, onHost, onWager, onSecond }: { budget: number; on
             {result.ok && <a href={result.url} target="_blank" rel="noreferrer">view ↗</a>}
           </div>
         )}
-        <button className="pay" onClick={pay}>
-          {busy ? 'Paying…' : <>Pay {amount}.00 USD₮ <span className="f">· {cat.icon} {cat.label} · gasless ⚡</span></>}
+        <button className="pay" onClick={pay} disabled={busy}>
+          {busy ? 'Paying on Arbitrum…' : <>Pay {amount} USD₮ <span className="f">· {cat.icon} {cat.label} · gasless ⚡</span></>}
         </button>
       </div>
     </>

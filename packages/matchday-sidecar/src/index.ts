@@ -1,5 +1,0 @@
-export { MatchdaySidecar } from './service'
-export type { SidecarDeps, PayRequest, TransferRequest, OnchainSnapshot, PremiumItem, X402Requirements } from './service'
-export { createServer } from './http'
-export { makeOnchainReader, GUARD_ADDRESS } from './onchain'
-export { buildFromEnv, DEMO_RULES, DEMO_PREMIUM } from './config'

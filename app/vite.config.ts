@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: {
+    global: 'globalThis',
+    'process.env': {},
+  },
   plugins: [
     react(),
     VitePWA({
@@ -22,7 +26,7 @@ export default defineConfig({
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' },
         ],
       },
-      devOptions: { enabled: true },
+      devOptions: { enabled: false },
     }),
   ],
   server: {

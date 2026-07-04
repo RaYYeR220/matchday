@@ -18,7 +18,7 @@ export function Setup({ budget, setBudget, onNext, onBack }: {
             Your total spend cap for ARG vs FRA. Spend resets after the final whistle.
           </p>
           <div className="bsel">
-            {[50, 100, 200].map((b) => (
+            {[3, 5, 10].map((b) => (
               <button key={b} className={budget === b ? 'on' : ''} onClick={() => setBudget(b)}>{b} USD₮</button>
             ))}
           </div>
@@ -34,7 +34,7 @@ export function Setup({ budget, setBudget, onNext, onBack }: {
             </div>
           ))}
           <div className="guard" style={{ marginTop: 12 }}>
-            📣 <span><b>Cheers</b> also limited to 5 USD₮ per tap, one every 30s — no tilt-tipping.</span>
+            📣 <span><b>Cheers</b> also limited to 0.5 USD₮ per tap, one every 30s — no tilt-tipping.</span>
           </div>
         </div>
 

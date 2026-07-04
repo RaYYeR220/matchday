@@ -14,9 +14,14 @@
     "@matchday/policy-guard": "workspace:*",
     "@matchday/sdk": "workspace:*",
     "@matchday/wallet-multichain": "workspace:*",
+    "@tetherto/wdk-wallet-evm-erc-4337": "*",
+    "bip39": "^3.1.0",
+    "buffer": "^6.0.3",
+    "permissionless": "^0.3.6",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "viem": "^2.21.0"
   },
   "devDependencies": {
     "@types/qrcode": "^1.5.5",
