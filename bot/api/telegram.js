@@ -21,9 +21,10 @@ async function tg(token, method, body) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(200).json({ ok: true, bot: 'matchday' })
 
-  // Only Telegram knows the secret we registered with setWebhook.
+  // Only Telegram knows the secret we registered with setWebhook. Fail closed: if the
+  // secret isn't configured, reject everything rather than accepting unauthenticated calls.
   const secret = process.env.WEBHOOK_SECRET
-  if (secret && req.headers['x-telegram-bot-api-secret-token'] !== secret) {
+  if (!secret || req.headers['x-telegram-bot-api-secret-token'] !== secret) {
     return res.status(401).json({ ok: false })
   }
 
