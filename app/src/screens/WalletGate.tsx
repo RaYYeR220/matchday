@@ -3,6 +3,27 @@ import { clearWallet, hasWallet, newMnemonic, saveMnemonic, unlockMnemonic } fro
 
 type Mode = 'unlock' | 'create' | 'import'
 
+/** A wallet-style numeric keypad for the PIN (up to 6 digits) — dots fill as you tap. */
+function PinPad({ pin, setPin, max = 6 }: { pin: string; setPin: (p: string) => void; max?: number }) {
+  const press = (d: string) => { if (pin.length < max) setPin(pin + d) }
+  const del = () => setPin(pin.slice(0, -1))
+  return (
+    <div className="pinpad">
+      <div className="pindots">
+        {Array.from({ length: max }).map((_, i) => <span key={i} className={'pindot' + (i < pin.length ? ' on' : '')} />)}
+      </div>
+      <div className="pinkeys">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <button key={n} type="button" className="pinkey" onClick={() => press(String(n))}>{n}</button>
+        ))}
+        <span />
+        <button type="button" className="pinkey" onClick={() => press('0')}>0</button>
+        <button type="button" className="pinkey del" onClick={del} aria-label="delete">⌫</button>
+      </div>
+    </div>
+  )
+}
+
 /** Gate that produces the decrypted recovery phrase — created, unlocked, or imported on-device.
  *  The phrase is encrypted under a PIN and never leaves the browser. */
 export function WalletGate({ onReady }: { onReady: (mnemonic: string, returning: boolean) => void }) {
@@ -67,8 +88,8 @@ export function WalletGate({ onReady }: { onReady: (mnemonic: string, returning:
             </>
           )}
 
-          <div className="lbl">PIN</div>
-          <input className="fld" type="password" inputMode="numeric" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="••••" />
+          <div className="lbl">{mode === 'unlock' ? 'Enter your PIN' : 'Choose a PIN'}</div>
+          <PinPad pin={pin} setPin={setPin} />
 
           {err && <div className="wgerr">⚠️ {err}</div>}
         </div>
