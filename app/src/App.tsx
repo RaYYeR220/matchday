@@ -7,7 +7,7 @@ import { Wager } from './screens/Wager'
 import { SecondScreen } from './screens/SecondScreen'
 import { WalletGate } from './screens/WalletGate'
 import { WdkBrowserWallet } from './wallet/wdkWallet'
-import { ACTIVE, NETWORK } from './data'
+import { ACTIVE } from './data'
 
 type Screen = 'intro' | 'wallet' | 'setup' | 'home' | 'host' | 'wager' | 'second'
 
@@ -17,7 +17,7 @@ export function App() {
   const [wallet, setWallet] = useState<WdkBrowserWallet | null>(null)
 
   function onReady(mnemonic: string, returning: boolean) {
-    setWallet(new WdkBrowserWallet(mnemonic, NETWORK))
+    setWallet(new WdkBrowserWallet(mnemonic))
     setScreen(returning ? 'home' : 'setup')
   }
 

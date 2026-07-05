@@ -1,8 +1,6 @@
 import type { PolicyRules } from '@matchday/policy-core'
 
-export type Network = 'mainnet' | 'testnet'
-
-/** Allowlisted demo recipient (a vendor/host we set up before the match). */
+/** Allowlisted recipient (the vendor / host set up before the match). */
 export const PAYEE = '0x000000000000000000000000000000000000dEaD'
 
 export interface Category { key: string; label: string; icon: string; payee: string }
@@ -33,7 +31,7 @@ export const fmt = (base: bigint) => {
 }
 
 export interface Premium { id: string; emoji: string; title: string; blurb: string; price: number; body: string }
-export interface NetNumbers {
+export interface Numbers {
   rules: PolicyRules
   amounts: number[]
   goalAmounts: number[]
@@ -43,8 +41,8 @@ export interface NetNumbers {
   defaultBudget: number
 }
 
-/** Mainnet: small, real-money scale (the deployed self-custodial wallet). */
-const mainnet: NetNumbers = {
+/** The wallet's spend scale on Arbitrum — small, real-money amounts. */
+export const ACTIVE: Numbers = {
   rules: {
     totalBudget: 5n * U,
     perCategoryCaps: { bar: 2n * U, cheers: 1n * U, merch: 1_500_000n, pool: 1_500_000n, wager: 1n * U, unlock: 1n * U },
@@ -64,41 +62,3 @@ const mainnet: NetNumbers = {
   budgets: [3, 5, 10],
   defaultBudget: 5,
 }
-
-/** Testnet: round demo numbers (Arbitrum Sepolia, sponsored gas, test USD₮). */
-const testnet: NetNumbers = {
-  rules: {
-    totalBudget: 500n * U,
-    perCategoryCaps: { bar: 200n * U, cheers: 100n * U, merch: 150n * U, pool: 150n * U, wager: 100n * U, unlock: 50n * U },
-    perCategoryStakeCaps: { cheers: 50n * U, wager: 50n * U },
-    cooldownSeconds: { cheers: 30, wager: 30 },
-    allowlist: [PAYEE],
-    window: { start: 0, end: 4_000_000_000 },
-  },
-  amounts: [5, 10, 25, 50],
-  goalAmounts: [5, 10, 25],
-  stakes: [10, 25, 50, 80],
-  premium: [
-    { id: 'xg', emoji: '📊', title: 'Live xG & shot map', blurb: 'Expected-goals feed + every shot, live.', price: 25, body: 'ARG 2.7 xG · FRA 1.4 xG · 18 shots, 7 on target' },
-    { id: 'tac', emoji: '🎥', title: 'Tactical cam', blurb: 'Wide tactical angle, full pitch.', price: 50, body: '▶ Tactical cam — full-pitch feed unlocked' },
-    { id: 'heat', emoji: '🔥', title: 'Player heatmaps', blurb: 'Live positioning for both XIs.', price: 25, body: 'Messi heatmap: right half-space, deep playmaking' },
-  ],
-  budgets: [200, 500, 1000],
-  defaultBudget: 500,
-}
-
-export const NUMBERS: Record<Network, NetNumbers> = { mainnet, testnet }
-
-// Network is fixed for the session, decided at load. Testnet is opt-in (`?testnet`) and only
-// where a sponsor key exists (local video demo); the deployed app is always the real mainnet wallet.
-function detectNetwork(): Network {
-  try {
-    const params = new URLSearchParams(location.search)
-    return params.has('testnet') && import.meta.env.VITE_PIMLICO_KEY ? 'testnet' : 'mainnet'
-  } catch {
-    return 'mainnet'
-  }
-}
-
-export const NETWORK: Network = detectNetwork()
-export const ACTIVE: NetNumbers = NUMBERS[NETWORK]

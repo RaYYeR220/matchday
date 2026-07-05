@@ -82,7 +82,7 @@ export function Home({ budget, wallet, onHost, onWager, onSecond }: { budget: nu
     setBusy(true); setResult(null)
     try {
       await payReal(toBase(perGoal), 'good', (url, fee) =>
-        setResult({ ok: true, msg: `⚽ GOAL! Donated ${perGoal} USD₮ to Football for Good`, sub: `auto-rule · gasless · fee ${fmt(fee)} USD₮`, url }))
+        setResult({ ok: true, msg: `❤️ Donated ${perGoal} USD₮ to Football for Good`, sub: `goal-for-good · gasless · fee ${fmt(fee)} USD₮`, url }))
     } catch (e) {
       if (e instanceof PolicyViolationError) setResult({ ok: false, msg: 'Goal donation blocked', sub: FRIENDLY[e.reason] })
       else setResult({ ok: false, msg: 'Failed', sub: String((e as Error).message) })
@@ -171,7 +171,7 @@ export function Home({ budget, wallet, onHost, onWager, onSecond }: { budget: nu
           <div className="amts">
             {ACTIVE.goalAmounts.map((a) => <button key={a} className={perGoal === a ? 'on' : ''} onClick={() => setPerGoal(a)}>{a} USD₮ / goal</button>)}
           </div>
-          <button className="simgoal" onClick={goal}>⚽ Simulate a goal</button>
+          <button className="donatebtn" onClick={goal}>❤️ Donate now</button>
         </div>
       </div>
 

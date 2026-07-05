@@ -157,8 +157,8 @@ header { flex: 0 0 auto; padding: 16px 18px 12px; z-index: 20; background: linea
 .toggle { border: 0; cursor: pointer; font-family: 'Fredoka'; font-weight: 600; font-size: 12px; padding: 6px 14px; border-radius: 999px; box-shadow: var(--gloss); }
 .toggle.on { background: var(--mint); color: var(--mint-deep); }
 .toggle.off { background: #f0e7dd; color: var(--ink-soft); }
-.simgoal { width: 100%; margin-top: 10px; border: 0; cursor: pointer; padding: 12px; border-radius: 15px; font-family: 'Fredoka'; font-weight: 600; font-size: 15px; color: #fff; background: linear-gradient(145deg, #ff8a8a, #ee5a5a); box-shadow: 0 8px 18px rgba(238, 90, 90, .32), var(--gloss); }
-.simgoal:active { transform: scale(.97); }
+.donatebtn { width: 100%; margin-top: 10px; border: 0; cursor: pointer; padding: 12px; border-radius: 15px; font-family: 'Fredoka'; font-weight: 600; font-size: 15px; color: #fff; background: linear-gradient(145deg, #ff8a8a, #ee5a5a); box-shadow: 0 8px 18px rgba(238, 90, 90, .32), var(--gloss); }
+.donatebtn:active { transform: scale(.97); }
 
 /* live (real backend) panel */
 .card.live { background: linear-gradient(180deg, #effdf6, #e6fbf2); border: 1.5px solid #b9f1da; }
