@@ -43,7 +43,7 @@ export function WalletGate({ onReady }: { onReady: (mnemonic: string, returning:
   }
 
   async function create() {
-    if (pin.length < 4) return setErr('Choose a PIN of at least 4 digits')
+    if (pin.length < 6) return setErr('Choose a 6-digit PIN')
     if (!saved) return setErr('Please back up your recovery phrase first')
     setBusy(true); setErr('')
     try { await saveMnemonic(phrase, pin); onReady(phrase, false) }
@@ -54,7 +54,7 @@ export function WalletGate({ onReady }: { onReady: (mnemonic: string, returning:
   async function importSeed() {
     const words = importText.trim().split(/\s+/)
     if (words.length !== 12 && words.length !== 24) return setErr('Enter a 12 or 24-word phrase')
-    if (pin.length < 4) return setErr('Choose a PIN of at least 4 digits')
+    if (pin.length < 6) return setErr('Choose a 6-digit PIN')
     setBusy(true); setErr('')
     try { const m = words.join(' '); await saveMnemonic(m, pin); onReady(m, true) }
     catch (e) { setErr((e as Error).message) }
@@ -88,7 +88,7 @@ export function WalletGate({ onReady }: { onReady: (mnemonic: string, returning:
             </>
           )}
 
-          <div className="lbl">{mode === 'unlock' ? 'Enter your PIN' : 'Choose a PIN'}</div>
+          <div className="lbl">{mode === 'unlock' ? 'Enter your 6-digit PIN' : 'Choose a 6-digit PIN'}</div>
           <PinPad pin={pin} setPin={setPin} />
 
           {err && <div className="wgerr">⚠️ {err}</div>}
@@ -103,7 +103,7 @@ export function WalletGate({ onReady }: { onReady: (mnemonic: string, returning:
       </div>
 
       <div className="paybar">
-        <button className="cta" disabled={busy} onClick={mode === 'unlock' ? unlock : mode === 'import' ? importSeed : create}>
+        <button className="cta" disabled={busy || pin.length < 6} onClick={mode === 'unlock' ? unlock : mode === 'import' ? importSeed : create}>
           {busy ? 'Working…' : mode === 'unlock' ? 'Unlock →' : mode === 'import' ? 'Import →' : 'Create wallet →'}
         </button>
       </div>
