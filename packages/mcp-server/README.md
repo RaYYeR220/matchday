@@ -25,7 +25,7 @@ Environment:
 
 ## Use it from an MCP client
 
-Point any MCP client (Claude Desktop, etc.) at the server:
+Point any MCP client at the server:
 
 ```json
 {
