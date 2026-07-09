@@ -22,6 +22,7 @@ Paying with stablecoins at a watch party should feel like tapping a card, not ju
 - **Host pools.** Spin up a watch-party tip-jar that receives USDT, with a shareable link and live progress toward a target.
 - **Friendly Wager.** A P2P bet matched with another fan. A per-tap stake cap and a cooldown keep it a bit of fun rather than tilt-betting.
 - **Second Screen.** Unlock premium match content pay-per-view with [x402](https://www.x402.org/) (HTTP 402 Payment Required). Each unlock is a gasless, policy-checked tap, with no subscription.
+- **Agent rail (MCP).** An [MCP](https://modelcontextprotocol.io/) server exposes the wallet to an AI agent — it can read the balance and rules, preview a payment and pay, but every payment is checked against your policy first. So you can hand an agent your wallet: it spends within your budget and caps, and can never go beyond them. In live mode those are real gasless transfers on Arbitrum.
 
 All of these run through the same policy-gated, gasless engine.
 
@@ -33,6 +34,7 @@ A small monorepo of focused packages plus an on-chain enforcer:
 - **`policy-guard`** — runs `policy-core` before a spend and advances the per-user spend state only once the payment settles.
 - **`wallet-multichain`** — one seed across Arbitrum (ERC-4337 account abstraction), TON (gasless relay) and TRON (GasFree) via WDK, behind a single `transfer` API that resolves each gasless payment to its settled transaction and explorer link.
 - **`sdk`** — the app-facing facade: policy-gated payments for fans, pool management for hosts.
+- **`mcp-server`** — a Model Context Protocol server that wraps the policy-gated wallet as agent tools (get balance, read policy, quote, pay). An AI agent is bound by exactly the same budget, caps and cooldowns a person is; over-limit or off-allowlist payments are rejected before anything is signed.
 - **`app`** — the React PWA / Telegram Mini-App. It runs WDK in the browser (`app/src/wallet`): a WebCrypto keystore (the phrase is generated and encrypted with a PIN on-device) plus a WDK smart account that signs gasless USDT payments on Arbitrum. `policy-guard` gates every spend client-side before it is signed.
 - **`contracts/MatchdayPolicyGuard.sol`** — the on-chain enforcer. It stores a fan's committed rules and recomputes the same rules hash the wallet derives off-chain (identical ABI layout), so the device check and the chain check enforce byte-identical policy. `pay()` reverts on any window, allowlist, stake, cooldown, budget or category-cap violation.
 

@@ -1,0 +1,25 @@
+{
+  "name": "@matchday/mcp-server",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "bin": { "matchday-mcp": "./src/bin.ts" },
+  "scripts": {
+    "start": "tsx src/bin.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@matchday/policy-core": "workspace:*",
+    "@matchday/policy-guard": "workspace:*",
+    "@matchday/wallet-multichain": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0",
+    "typescript": "^5.6.0",
+    "@types/node": "^22.7.0"
+  }
+}
